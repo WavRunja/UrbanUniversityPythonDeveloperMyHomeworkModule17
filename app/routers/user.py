@@ -1,9 +1,22 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from models.user import User
+from backend.db import SessionLocal
+from schemas import CreateUser
 
 router = APIRouter(
     prefix="/user",
     tags=["user"]
 )
+
+
+# Получаем сессию базы данных
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 # В модуле user.py напишите APIRouter с префиксом '/user' и тегом 'user',
@@ -24,9 +37,18 @@ async def user_by_id(user_id: int):
 
 # post '/create' с функцией create_user.
 @router.post("/create")
-async def create_user():
-    # pass
-    return {"message": "User created"}
+async def create_user(user: CreateUser, db: Session = Depends(get_db)):
+    new_user = User(
+        username=user.username,
+        firstname=user.firstname,
+        lastname=user.lastname,
+        age=user.age,
+        slug=user.username.lower()
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    return new_user
 
 
 # put '/update' с функцией update_user.
